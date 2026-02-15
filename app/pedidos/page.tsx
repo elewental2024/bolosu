@@ -260,7 +260,13 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end space-x-4">
+                      <Link
+                        href={`/chat/${order.id}`}
+                        className="text-pink-600 hover:text-pink-700 font-medium text-sm"
+                      >
+                        💬 Chat
+                      </Link>
                       <Link
                         href={`/pedidos/${order.id}`}
                         className="text-pink-600 hover:text-pink-700 font-medium text-sm"

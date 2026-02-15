@@ -170,10 +170,16 @@ export default function AdminDashboard() {
                   Dashboard
                 </Link>
                 <Link
-                  href="/produtos"
+                  href="/admin/produtos"
                   className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md hover:bg-gray-50"
                 >
                   Produtos
+                </Link>
+                <Link
+                  href="/admin/chat"
+                  className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md hover:bg-gray-50"
+                >
+                  Chat
                 </Link>
               </div>
             </div>
@@ -304,7 +310,10 @@ export default function AdminDashboard() {
                       {order.totalPrice ? formatCurrency(order.totalPrice) : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <button className="text-primary-600 hover:text-primary-700 font-semibold">
+                      <button 
+                        onClick={() => router.push(`/admin/pedidos/${order.id}`)}
+                        className="text-primary-600 hover:text-primary-700 font-semibold"
+                      >
                         Ver Detalhes
                       </button>
                     </td>
@@ -356,7 +365,10 @@ export default function AdminDashboard() {
                 <p className="text-lg font-semibold text-gray-900">
                   {order.totalPrice ? formatCurrency(order.totalPrice) : "-"}
                 </p>
-                <button className="text-primary-600 hover:text-primary-700 font-semibold text-sm">
+                <button 
+                  onClick={() => router.push(`/admin/pedidos/${order.id}`)}
+                  className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
+                >
                   Ver Detalhes
                 </button>
               </div>
