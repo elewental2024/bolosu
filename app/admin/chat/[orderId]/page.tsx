@@ -40,6 +40,7 @@ interface Order {
   deliveryAddress: string;
   deliveryDate: string;
   observations?: string;
+  deliveryFee?: number;
   originalPrice: number;
   negotiatedPrice?: number;
   priceHistory?: string;

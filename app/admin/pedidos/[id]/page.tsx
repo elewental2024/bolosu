@@ -33,6 +33,8 @@ interface Order {
   deliveryDate: string;
   observations?: string;
   deliveryFee?: number;
+  originalPrice: number;
+  negotiatedPrice?: number;
   totalPrice?: number;
   items: OrderItem[];
   createdAt: string;
