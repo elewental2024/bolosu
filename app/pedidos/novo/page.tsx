@@ -23,6 +23,7 @@ export default function NewOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryTime, setDeliveryTime] = useState('');
   const [observations, setObservations] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -87,8 +88,18 @@ export default function NewOrderPage() {
     e.preventDefault();
     setError('');
 
-    if (!user || !deliveryAddress || !deliveryDate) {
+    if (!user || !deliveryAddress || !deliveryDate || !deliveryTime) {
       setError('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    // Validar que a data não é no passado
+    const selectedDate = new Date(deliveryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      setError('A data de entrega não pode ser no passado.');
       return;
     }
 
@@ -104,6 +115,7 @@ export default function NewOrderPage() {
           userId: user.id,
           deliveryAddress,
           deliveryDate: new Date(deliveryDate).toISOString(),
+          deliveryTime,
           observations,
           items: cart.map((item) => ({
             productId: item.productId,
@@ -115,15 +127,18 @@ export default function NewOrderPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create order');
       }
 
-      // Clear cart and redirect
+      const order = await response.json();
+
+      // Clear cart and redirect to chat
       localStorage.removeItem('cart');
-      router.push('/pedidos');
+      router.push(`/chat/${order.id}`);
     } catch (error) {
       console.error('Error creating order:', error);
-      setError('Erro ao criar pedido. Por favor, tente novamente.');
+      setError(error instanceof Error ? error.message : 'Erro ao criar chamado. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -190,9 +205,9 @@ export default function NewOrderPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Finalizar Pedido</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Abrir Chamado</h1>
           <p className="text-gray-600">
-            Revise seu pedido e preencha os dados de entrega
+            Preencha os dados para iniciar a negociação do seu pedido
           </p>
         </div>
 
@@ -269,12 +284,26 @@ export default function NewOrderPage() {
 
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">
-                    Data e Hora da Entrega *
+                    Data de Entrega *
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={deliveryDate}
                     onChange={(e) => setDeliveryDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Horário de Entrega *
+                  </label>
+                  <input
+                    type="time"
+                    value={deliveryTime}
+                    onChange={(e) => setDeliveryTime(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                     required
                   />
@@ -325,8 +354,11 @@ export default function NewOrderPage() {
                 disabled={loading}
                 className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-medium transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {loading ? 'Enviando...' : 'Finalizar Pedido'}
+                {loading ? 'Enviando...' : '🎯 Abrir Chamado'}
               </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Após abrir o chamado, você poderá negociar detalhes e preço com nossa equipe
+              </p>
             </div>
           </div>
         </div>

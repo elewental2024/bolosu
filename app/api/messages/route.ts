@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { logMessageSent } from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -71,6 +72,14 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Registrar mensagem no log para compliance legal
+    await logMessageSent(
+      orderId,
+      userId,
+      message.user.role,
+      content
+    );
 
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
