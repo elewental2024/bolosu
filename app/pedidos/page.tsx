@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { MessageCircle, Package } from 'lucide-react';
 
 interface OrderItem {
   id: string;
@@ -274,18 +275,20 @@ export default function OrdersPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end space-x-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Link
                         href={`/chat/${order.id}`}
-                        className="text-pink-600 hover:text-pink-700 font-medium text-sm"
+                        className="flex-1 flex items-center justify-center space-x-2 bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-lg font-semibold text-base transition-colors shadow-md hover:shadow-lg"
                       >
-                        💬 Chat
+                        <MessageCircle className="w-5 h-5" />
+                        <span>💬 Abrir Chat</span>
                       </Link>
                       <Link
                         href={`/pedidos/${order.id}`}
-                        className="text-pink-600 hover:text-pink-700 font-medium text-sm"
+                        className="flex-1 flex items-center justify-center space-x-2 bg-white hover:bg-gray-50 text-pink-600 border-2 border-pink-600 px-6 py-3 rounded-lg font-semibold text-base transition-colors shadow-md hover:shadow-lg"
                       >
-                        Ver detalhes →
+                        <Package className="w-5 h-5" />
+                        <span>📋 Ver Detalhes</span>
                       </Link>
                     </div>
                   </div>
