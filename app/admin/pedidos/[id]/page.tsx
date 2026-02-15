@@ -75,7 +75,6 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -100,7 +99,6 @@ export default function OrderDetailPage() {
       const data = await response.json();
       setOrder(data);
       setStatus(data.status);
-      setDeliveryFee(data.deliveryFee?.toString() || "0");
     } catch (error) {
       console.error("Error fetching order:", error);
       alert("Erro ao carregar pedido");
@@ -115,9 +113,8 @@ export default function OrderDetailPage() {
   };
 
   const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const fee = parseFloat(deliveryFee) || 0;
-    return subtotal + fee;
+    if (!order) return 0;
+    return order.negotiatedPrice || order.totalPrice || calculateSubtotal();
   };
 
   const handleSave = async () => {
@@ -132,8 +129,6 @@ export default function OrderDetailPage() {
         },
         body: JSON.stringify({
           status,
-          deliveryFee: parseFloat(deliveryFee) || 0,
-          totalPrice: calculateTotal(),
         }),
       });
 
@@ -328,33 +323,40 @@ export default function OrderDetailPage() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Taxa de Entrega (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={deliveryFee}
-                onChange={(e) => setDeliveryFee(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                💡 Para ajustar valores e taxa de entrega
+              </p>
+              <p className="text-sm text-blue-700">
+                Use o <strong>Chat do Pedido</strong> para atualizar preços e definir a taxa de entrega.
+              </p>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium text-gray-900">
-                  Preço Total
-                </span>
-                <span className="text-2xl font-bold text-gray-900">
-                  R$ {calculateTotal().toFixed(2)}
-                </span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Preço dos Produtos</span>
+                  <span className="font-medium text-gray-900">
+                    R$ {calculateSubtotal().toFixed(2)}
+                  </span>
+                </div>
+                {order.deliveryFee !== undefined && order.deliveryFee !== null && order.deliveryFee > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Taxa de Entrega</span>
+                    <span className="font-medium text-gray-900">
+                      R$ {order.deliveryFee.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-lg font-medium text-gray-900">
+                    Preço Total
+                  </span>
+                  <span className="text-2xl font-bold text-gray-900">
+                    R$ {calculateTotal().toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Subtotal (R$ {calculateSubtotal().toFixed(2)}) + Taxa de Entrega
-                (R$ {parseFloat(deliveryFee || "0").toFixed(2)})
-              </p>
             </div>
 
             <button
