@@ -15,6 +15,8 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [cpf, setCpf] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,13 +30,24 @@ export default function RegisterPage() {
       return;
     }
 
+    // Validate PIN
+    if (!/^\d{4}$/.test(pin)) {
+      setError("PIN deve conter exatamente 4 números");
+      return;
+    }
+
+    if (pin !== pinConfirm) {
+      setError("PINs não conferem");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, whatsapp, cpf }),
+        body: JSON.stringify({ name, whatsapp, cpf, pin }),
       });
 
       const data = await response.json();
@@ -135,6 +148,47 @@ export default function RegisterPage() {
                   required
                   maxLength={14}
                 />
+              </div>
+
+              <div className="border-t pt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pin">Crie um PIN de 4 dígitos*</Label>
+                  <p className="text-sm text-gray-600">
+                    Use para acessar sua conta de forma segura
+                  </p>
+                  <Input
+                    type="password"
+                    id="pin"
+                    value={pin}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setPin(value.slice(0, 4));
+                    }}
+                    placeholder="••••"
+                    required
+                    maxLength={4}
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pinConfirm">Confirme o PIN*</Label>
+                  <Input
+                    type="password"
+                    id="pinConfirm"
+                    value={pinConfirm}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setPinConfirm(value.slice(0, 4));
+                    }}
+                    placeholder="••••"
+                    required
+                    maxLength={4}
+                    inputMode="numeric"
+                    pattern="[0-9]{4}"
+                  />
+                </div>
               </div>
 
               <Button

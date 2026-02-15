@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function LoginPage() {
   const [whatsapp, setWhatsapp] = useState("");
   const [cpf, setCpf] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ whatsapp, cpf }),
+        body: JSON.stringify({ whatsapp, cpf, pin: pin || undefined }),
       });
 
       const data = await response.json();
@@ -119,6 +120,26 @@ export default function LoginPage() {
                   required
                   maxLength={14}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pin">PIN (4 dígitos)</Label>
+                <Input
+                  type="password"
+                  id="pin"
+                  value={pin}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setPin(value.slice(0, 4));
+                  }}
+                  placeholder="••••"
+                  maxLength={4}
+                  inputMode="numeric"
+                  pattern="[0-9]{4}"
+                />
+                <p className="text-xs text-gray-500">
+                  Digite seu PIN de 4 dígitos. Se você não tem PIN, deixe em branco (usuários antigos).
+                </p>
               </div>
 
               <Button
