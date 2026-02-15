@@ -6,11 +6,12 @@ import { productSchema } from '@/lib/validations'
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!product) {
@@ -31,9 +32,10 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || session.user.role !== 'admin') {
@@ -44,7 +46,7 @@ export async function PATCH(
     const validatedData = productSchema.partial().parse(body)
 
     const product = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     })
 
@@ -59,9 +61,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || session.user.role !== 'admin') {
@@ -69,7 +72,7 @@ export async function DELETE(
     }
 
     await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: { active: false },
     })
 

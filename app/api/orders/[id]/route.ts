@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session) {
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: true,
         items: {
@@ -57,9 +58,10 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession(authOptions)
 
     if (!session || session.user.role !== 'admin') {
@@ -69,7 +71,7 @@ export async function PATCH(
     const body = await req.json()
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: body,
       include: {
         items: {
