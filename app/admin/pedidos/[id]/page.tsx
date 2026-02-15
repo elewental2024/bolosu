@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatPrice, getStatusLabel, getStatusColor } from '@/lib/utils'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR } from 'date-fns/locale/pt-BR'
 
 interface Order {
   id: string
