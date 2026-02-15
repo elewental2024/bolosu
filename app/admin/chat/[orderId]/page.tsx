@@ -97,7 +97,8 @@ export default function AdminChatDetailPage() {
   const [priceReason, setPriceReason] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const previousMessageCountRef = useRef(0);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -116,20 +117,24 @@ export default function AdminChatDetailPage() {
     fetchOrder();
     fetchMessages();
 
+    // Poll for updates every 5 seconds (increased from 3s)
     const interval = setInterval(() => {
       fetchOrder();
       fetchMessages();
-    }, 3000);
-    setPollingInterval(interval);
+    }, 5000);
 
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, [orderId, router]);
 
+  // Only scroll when NEW messages arrive
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > previousMessageCountRef.current && shouldAutoScroll) {
+      scrollToBottom();
+    }
+    previousMessageCountRef.current = messages.length;
+  }, [messages.length, shouldAutoScroll]);
 
   const fetchOrder = async () => {
     try {
@@ -183,6 +188,8 @@ export default function AdminChatDetailPage() {
       }
 
       setNewMessage('');
+      // Force scroll when sending a new message
+      setShouldAutoScroll(true);
       await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -265,6 +272,12 @@ export default function AdminChatDetailPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const isAtBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+    setShouldAutoScroll(isAtBottom);
   };
 
   const formatTime = (dateString: string) => {
@@ -578,7 +591,7 @@ export default function AdminChatDetailPage() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" onScroll={handleScroll}>
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">💬</div>
