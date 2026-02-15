@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { ClientNavbar } from '@/components/layout/ClientNavbar';
+import { ProductCard } from '@/components/products/ProductCard';
+import { toast, Toaster } from '@/components/ui/toast';
+import { Loader2 } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -54,6 +57,11 @@ export default function ProductsPage() {
       setProducts(data);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os produtos',
+        variant: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -83,141 +91,90 @@ export default function ProductsPage() {
 
     setCart(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-  };
+    
+    // Dispatch storage event to update navbar
+    window.dispatchEvent(new Event('storage'));
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('cart');
-    router.push('/login');
-  };
-
-  const goToOrders = () => {
-    router.push('/pedidos');
-  };
-
-  const goToCart = () => {
-    router.push('/pedidos/novo');
-  };
-
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
+    toast({
+      title: 'Adicionado ao carrinho! 🎉',
+      description: `${product.name} foi adicionado com sucesso`,
+      variant: 'success',
+    });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-accent-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-pink-600 mx-auto"></div>
-          <p className="mt-4 text-pink-600 font-medium">Carregando produtos...</p>
+          <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-lg text-gray-600 font-medium">Carregando produtos deliciosos...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-pink-600">🎂 Bolos Su</div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={goToOrders}
-                className="text-pink-600 hover:text-pink-700 font-medium"
-              >
-                📋 Meus Pedidos
-              </button>
-              {cart.length > 0 && (
-                <button
-                  onClick={goToCart}
-                  className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-                >
-                  <span>🛒 Carrinho</span>
-                  <span className="bg-white text-pink-600 text-xs rounded-full px-2 py-1">
-                    {cart.reduce((sum, item) => sum + item.quantity, 0)}
-                  </span>
-                </button>
-              )}
-              <button
-                onClick={handleLogout}
-                className="text-pink-600 hover:text-pink-700 font-medium"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-b from-accent-50 to-white">
+      <ClientNavbar />
+      <Toaster />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Catálogo de Produtos</h1>
-          <p className="text-gray-600">
-            Escolha seus produtos favoritos e adicione ao seu pedido
+      <main className="container mx-auto px-4 py-10">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-4">
+            Nosso Cardápio
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Explore nossa seleção de bolos artesanais feitos com ingredientes premium e muito amor
           </p>
         </div>
 
+        {/* Products Grid */}
         {products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Nenhum produto disponível no momento.</p>
+          <div className="text-center py-20">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-5xl">🎂</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Nenhum produto disponível
+            </h3>
+            <p className="text-gray-600">
+              Estamos preparando novidades deliciosas para você!
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <div
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product, index) => (
+              <ProductCard
                 key={product.id}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <div className="relative h-64 bg-gray-200">
-                  {product.imageUrl ? (
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <span className="text-6xl">🎂</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    {product.name}
-                  </h3>
-                  <p className="text-gray-600 mb-4 text-sm">
-                    {truncateText(product.description, 100)}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-pink-600">
-                      {formatPrice(product.price)}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="w-full mt-4 bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-medium transition-colors"
-                  >
-                    Adicionar ao Pedido
-                  </button>
-                </div>
-              </div>
+                product={product}
+                onAddToCart={() => addToCart(product)}
+                isNew={index < 2}
+                isPopular={index === 1 || index === 7}
+              />
             ))}
           </div>
         )}
+
+        {/* Trust Badges */}
+        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="text-center p-6 bg-white rounded-2xl shadow-soft">
+            <div className="text-4xl mb-3">✨</div>
+            <h3 className="font-bold text-gray-900 mb-2">Qualidade Premium</h3>
+            <p className="text-sm text-gray-600">Ingredientes selecionados</p>
+          </div>
+          <div className="text-center p-6 bg-white rounded-2xl shadow-soft">
+            <div className="text-4xl mb-3">🚚</div>
+            <h3 className="font-bold text-gray-900 mb-2">Entrega Rápida</h3>
+            <p className="text-sm text-gray-600">Fresquinho na sua casa</p>
+          </div>
+          <div className="text-center p-6 bg-white rounded-2xl shadow-soft">
+            <div className="text-4xl mb-3">💬</div>
+            <h3 className="font-bold text-gray-900 mb-2">Suporte Dedicado</h3>
+            <p className="text-sm text-gray-600">Chat direto conosco</p>
+          </div>
+        </div>
       </main>
     </div>
   );
