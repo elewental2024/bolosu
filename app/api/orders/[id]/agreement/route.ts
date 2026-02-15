@@ -36,7 +36,15 @@ export async function POST(
 
     // Determinar qual flag atualizar
     const isAdmin = userRole === 'admin';
-    const updateData: any = {
+    
+    interface OrderUpdateData {
+      agreedByAdmin?: boolean;
+      agreedByCustomer?: boolean;
+      agreedAt?: Date;
+      status?: string;
+    }
+    
+    const updateData: OrderUpdateData = {
       [isAdmin ? 'agreedByAdmin' : 'agreedByCustomer']: true,
     };
 

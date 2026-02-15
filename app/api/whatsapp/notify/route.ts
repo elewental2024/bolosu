@@ -7,9 +7,12 @@ import { logWhatsAppNotification } from '@/lib/logger';
  * Body: { orderId, customerName, items, deliveryDate, deliveryTime, observations }
  */
 export async function POST(request: NextRequest) {
+  let orderId: string | undefined;
+  
   try {
     const body = await request.json();
-    const { orderId, customerName, items, deliveryDate, deliveryTime, observations, chatUrl } = body;
+    const { orderId: bodyOrderId, customerName, items, deliveryDate, deliveryTime, observations, chatUrl } = body;
+    orderId = bodyOrderId;
 
     if (!orderId || !customerName) {
       return NextResponse.json(
@@ -122,19 +125,18 @@ _Acesse o painel admin para negociar e confirmar o pedido._
   } catch (error) {
     console.error('Error sending WhatsApp notification:', error);
     
-    // Tentar registrar erro no log se temos orderId
-    try {
-      const body = await request.json();
-      if (body.orderId) {
+    // Tentar registrar erro no log usando o orderId já disponível
+    if (orderId) {
+      try {
         await logWhatsAppNotification(
-          body.orderId,
+          orderId,
           false,
           process.env.ADMIN_WHATSAPP || 'N/A',
           error instanceof Error ? error.message : 'Unknown error'
         );
+      } catch (logError) {
+        console.error('Error logging WhatsApp failure:', logError);
       }
-    } catch (logError) {
-      console.error('Error logging WhatsApp failure:', logError);
     }
 
     return NextResponse.json(

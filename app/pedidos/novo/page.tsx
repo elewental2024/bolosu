@@ -128,7 +128,7 @@ export default function NewOrderPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        throw new Error(errorData.error || 'Falha ao criar chamado');
       }
 
       const order = await response.json();

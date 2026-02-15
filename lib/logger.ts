@@ -48,9 +48,9 @@ export async function createOrderLog(
     return log;
   } catch (error) {
     console.error('Error creating order log:', error);
-    // Não falhar a operação principal se o log falhar
-    // mas registrar o erro para investigação
-    throw error;
+    // Logs são importantes mas não devem bloquear operações principais
+    // Registrar erro mas não propagar exceção
+    return null;
   }
 }
 
