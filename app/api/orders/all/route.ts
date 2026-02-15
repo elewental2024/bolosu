@@ -19,12 +19,11 @@ export async function GET(request: NextRequest) {
 
     // Filter by search query (client name, whatsapp, or cpf)
     if (search) {
-      const searchTerm = search.toLowerCase();
       where.user = {
         OR: [
-          { name: { contains: searchTerm } },
-          { whatsapp: { contains: searchTerm } },
-          { cpf: { contains: searchTerm } },
+          { name: { contains: search } },
+          { whatsapp: { contains: search } },
+          { cpf: { contains: search } },
         ],
       };
     }
