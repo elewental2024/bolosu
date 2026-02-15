@@ -82,13 +82,10 @@ export async function PUT(
         reason
       );
     } else if (deliveryFee !== undefined) {
-      // Se apenas taxa de entrega foi atualizada, recalcular negotiatedPrice
-      const basePrice = currentOrder.negotiatedPrice || currentOrder.originalPrice;
-      const oldDeliveryFee = currentOrder.deliveryFee || 0;
-      const adjustedPrice = basePrice - oldDeliveryFee + deliveryFee;
-      
-      updateData.negotiatedPrice = adjustedPrice;
-      updateData.totalPrice = adjustedPrice;
+      // If only delivery fee was updated, keep existing negotiated price but update delivery fee
+      // The negotiatedPrice represents the total (products + delivery + adjustments)
+      // So we don't recalculate it automatically - admin must explicitly set it
+      // This ensures admin has full control over final pricing
     }
 
     // Atualizar pedido
