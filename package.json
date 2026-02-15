@@ -10,7 +10,7 @@
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.cjs"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/elewental2024/bolosu/issues"
   },
@@ -35,7 +35,7 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "next": "^14.2.35",
+    "next": "^16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "postcss": "^8.5.6",
     "prisma": "^5.22.0",
