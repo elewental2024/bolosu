@@ -16,6 +16,7 @@ model User {
   cpf       String    @unique
   name      String
   role      String    @default("client")
+  pin       String?   // 4-digit PIN hash
   orders    Order[]
   messages  Message[]
   createdAt DateTime  @default(now())

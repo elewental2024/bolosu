@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { logPriceUpdate } from '@/lib/logger';
+import { logPriceUpdate, logDeliveryFeeUpdate } from '@/lib/logger';
 
 /**
  * API para atualizar o preço negociado de um pedido
@@ -13,11 +13,11 @@ export async function PUT(
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { negotiatedPrice, updatedBy, reason } = body;
+    const { negotiatedPrice, deliveryFee, updatedBy, reason } = body;
 
-    if (!negotiatedPrice || !updatedBy) {
+    if (!updatedBy) {
       return NextResponse.json(
-        { error: 'negotiatedPrice e updatedBy são obrigatórios' },
+        { error: 'updatedBy é obrigatório' },
         { status: 400 }
       );
     }
@@ -34,28 +34,64 @@ export async function PUT(
       );
     }
 
-    // Atualizar histórico de preços
+    const updateData: any = {};
     const priceHistoryArray = currentOrder.priceHistory 
       ? JSON.parse(currentOrder.priceHistory) 
       : [];
-    
-    priceHistoryArray.push({
-      oldPrice: currentOrder.negotiatedPrice || currentOrder.originalPrice,
-      newPrice: negotiatedPrice,
-      updatedBy,
-      updatedAt: new Date().toISOString(),
-      reason,
-    });
+
+    // Handle delivery fee update
+    if (deliveryFee !== undefined && deliveryFee !== null) {
+      updateData.deliveryFee = deliveryFee;
+      
+      // Log delivery fee update
+      await logDeliveryFeeUpdate(
+        id,
+        currentOrder.deliveryFee || null,
+        deliveryFee,
+        updatedBy,
+        reason
+      );
+    }
+
+    // Handle price update
+    if (negotiatedPrice !== undefined && negotiatedPrice !== null) {
+      // Calculate final negotiated price including delivery fee
+      const finalDeliveryFee = deliveryFee !== undefined ? deliveryFee : (currentOrder.deliveryFee || 0);
+      const finalNegotiatedPrice = negotiatedPrice;
+      
+      priceHistoryArray.push({
+        oldPrice: currentOrder.negotiatedPrice || currentOrder.originalPrice,
+        newPrice: finalNegotiatedPrice,
+        deliveryFee: finalDeliveryFee,
+        updatedBy,
+        updatedAt: new Date().toISOString(),
+        reason,
+      });
+
+      updateData.negotiatedPrice = finalNegotiatedPrice;
+      updateData.totalPrice = finalNegotiatedPrice;
+      updateData.priceHistory = JSON.stringify(priceHistoryArray);
+      updateData.status = 'NEGOTIATING'; // Mudar status para negociando
+
+      // Registrar alteração de preço no log
+      await logPriceUpdate(
+        id,
+        currentOrder.negotiatedPrice || currentOrder.originalPrice,
+        finalNegotiatedPrice,
+        updatedBy,
+        reason
+      );
+    } else if (deliveryFee !== undefined) {
+      // If only delivery fee was updated, keep existing negotiated price but update delivery fee
+      // The negotiatedPrice represents the total (products + delivery + adjustments)
+      // So we don't recalculate it automatically - admin must explicitly set it
+      // This ensures admin has full control over final pricing
+    }
 
     // Atualizar pedido
     const updatedOrder = await prisma.order.update({
       where: { id },
-      data: {
-        negotiatedPrice,
-        totalPrice: negotiatedPrice,
-        priceHistory: JSON.stringify(priceHistoryArray),
-        status: 'NEGOTIATING', // Mudar status para negociando
-      },
+      data: updateData,
       include: {
         items: {
           include: {
@@ -65,15 +101,6 @@ export async function PUT(
         user: true,
       },
     });
-
-    // Registrar alteração de preço no log
-    await logPriceUpdate(
-      id,
-      currentOrder.negotiatedPrice || currentOrder.originalPrice,
-      negotiatedPrice,
-      updatedBy,
-      reason
-    );
 
     return NextResponse.json(updatedOrder);
   } catch (error) {

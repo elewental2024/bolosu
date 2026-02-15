@@ -40,6 +40,7 @@ interface Order {
   deliveryAddress: string;
   deliveryDate: string;
   observations?: string;
+  deliveryFee?: number;
   originalPrice: number;
   negotiatedPrice?: number;
   priceHistory?: string;
@@ -94,10 +95,12 @@ export default function AdminChatDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [newPrice, setNewPrice] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState('');
   const [priceReason, setPriceReason] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const previousMessageCountRef = useRef(0);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -116,20 +119,24 @@ export default function AdminChatDetailPage() {
     fetchOrder();
     fetchMessages();
 
+    // Poll for updates every 5 seconds (increased from 3s)
     const interval = setInterval(() => {
       fetchOrder();
       fetchMessages();
-    }, 3000);
-    setPollingInterval(interval);
+    }, 5000);
 
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, [orderId, router]);
 
+  // Only scroll when NEW messages arrive
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > previousMessageCountRef.current && shouldAutoScroll) {
+      scrollToBottom();
+    }
+    previousMessageCountRef.current = messages.length;
+  }, [messages.length, shouldAutoScroll]);
 
   const fetchOrder = async () => {
     try {
@@ -183,6 +190,8 @@ export default function AdminChatDetailPage() {
       }
 
       setNewMessage('');
+      // Force scroll when sending a new message
+      setShouldAutoScroll(true);
       await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -195,26 +204,44 @@ export default function AdminChatDetailPage() {
   const handleUpdatePrice = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !order || !newPrice) return;
+    if (!user || !order) return;
     
-    const priceValue = parseFloat(newPrice);
-    if (isNaN(priceValue) || priceValue <= 0) {
-      alert('Por favor, insira um preço válido.');
+    // At least one field must be filled
+    if (!newPrice && !deliveryFee) {
+      alert('Por favor, preencha o preço ou a taxa de entrega.');
+      return;
+    }
+    
+    const priceValue = newPrice ? parseFloat(newPrice) : undefined;
+    const feeValue = deliveryFee ? parseFloat(deliveryFee) : undefined;
+    
+    if ((priceValue !== undefined && (isNaN(priceValue) || priceValue < 0)) ||
+        (feeValue !== undefined && (isNaN(feeValue) || feeValue < 0))) {
+      alert('Por favor, insira valores válidos.');
       return;
     }
     
     setUpdating(true);
     try {
+      const body: any = {
+        updatedBy: user.id,
+        reason: priceReason || 'Atualização de valores',
+      };
+      
+      if (priceValue !== undefined) {
+        body.negotiatedPrice = priceValue;
+      }
+      
+      if (feeValue !== undefined) {
+        body.deliveryFee = feeValue;
+      }
+      
       const response = await fetch(`/api/orders/${orderId}/price`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          negotiatedPrice: priceValue,
-          updatedBy: user.id,
-          reason: priceReason || 'Atualização de preço',
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -223,11 +250,12 @@ export default function AdminChatDetailPage() {
 
       await fetchOrder();
       setNewPrice('');
+      setDeliveryFee('');
       setPriceReason('');
-      alert('Preço atualizado com sucesso!');
+      alert('Valores atualizados com sucesso!');
     } catch (error) {
       console.error('Error updating price:', error);
-      alert('Erro ao atualizar preço. Tente novamente.');
+      alert('Erro ao atualizar valores. Tente novamente.');
     } finally {
       setUpdating(false);
     }
@@ -265,6 +293,12 @@ export default function AdminChatDetailPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const isAtBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+    setShouldAutoScroll(isAtBottom);
   };
 
   const formatTime = (dateString: string) => {
@@ -389,6 +423,12 @@ export default function AdminChatDetailPage() {
                         <span className="text-sm text-gray-600">Original:</span>
                         <span className="text-sm font-medium">{formatCurrency(order.originalPrice)}</span>
                       </div>
+                      {order.deliveryFee !== undefined && order.deliveryFee !== null && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Taxa Entrega:</span>
+                          <span className="text-sm font-medium text-blue-600">{formatCurrency(order.deliveryFee)}</span>
+                        </div>
+                      )}
                       {order.negotiatedPrice && (
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Negociado:</span>
@@ -427,36 +467,51 @@ export default function AdminChatDetailPage() {
                   )}
 
                   <div className="border-t pt-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-3">Atualizar Preço</p>
+                    <p className="text-sm font-semibold text-gray-600 mb-3">📦 Atualizar Valores</p>
                     <form onSubmit={handleUpdatePrice} className="space-y-2">
                       <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Preço do Pedido (R$)</label>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={newPrice}
                           onChange={(e) => setNewPrice(e.target.value)}
-                          placeholder="Novo preço (R$)"
+                          placeholder="Ex: 150.00"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           disabled={updating}
                         />
                       </div>
                       <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Taxa de Entrega (R$)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={deliveryFee}
+                          onChange={(e) => setDeliveryFee(e.target.value)}
+                          placeholder="Ex: 15.00"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          disabled={updating}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 mb-1 block">Motivo/Observação</label>
                         <input
                           type="text"
                           value={priceReason}
                           onChange={(e) => setPriceReason(e.target.value)}
-                          placeholder="Motivo (opcional)"
+                          placeholder="Ex: Ajuste de distância"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           disabled={updating}
                         />
                       </div>
                       <button
                         type="submit"
-                        disabled={updating || !newPrice}
+                        disabled={updating || (!newPrice && !deliveryFee)}
                         className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
-                        {updating ? 'Atualizando...' : '💰 Atualizar Preço'}
+                        {updating ? 'Atualizando...' : '💰 Atualizar Valores'}
                       </button>
                     </form>
                   </div>
@@ -578,7 +633,7 @@ export default function AdminChatDetailPage() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" onScroll={handleScroll}>
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">💬</div>

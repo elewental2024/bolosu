@@ -4,9 +4,9 @@ import { loginUser } from '@/lib/auth'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { whatsapp, cpf } = body
+    const { whatsapp, cpf, pin } = body
     
-    console.log('Login attempt:', { whatsapp, cpf })
+    console.log('Login attempt:', { whatsapp, cpf, hasPin: !!pin })
 
     if (!whatsapp || !cpf) {
       return NextResponse.json(
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await loginUser(whatsapp, cpf)
+    const user = await loginUser(whatsapp, cpf, pin)
     console.log('Login result:', user)
 
     if (!user) {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Erro ao fazer login' },
-      { status: 500 }
+      { status: 401 }
     )
   }
 }

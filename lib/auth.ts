@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import { validateCPF } from './utils'
+import bcrypt from 'bcryptjs'
 
 export interface AuthUser {
   id: string
@@ -9,7 +10,7 @@ export interface AuthUser {
   role: string
 }
 
-export async function loginUser(whatsapp: string, cpf: string): Promise<AuthUser | null> {
+export async function loginUser(whatsapp: string, cpf: string, pin?: string): Promise<AuthUser | null> {
   const cleanWhatsapp = whatsapp.replace(/\D/g, '')
   const cleanCPF = cpf.replace(/\D/g, '')
   
@@ -33,6 +34,20 @@ export async function loginUser(whatsapp: string, cpf: string): Promise<AuthUser
   if (!user) {
     return null
   }
+
+  // Check if user has a PIN set
+  if (user.pin) {
+    // If user has PIN, verify it
+    if (!pin) {
+      throw new Error('PIN é obrigatório')
+    }
+    
+    const pinValid = await bcrypt.compare(pin, user.pin)
+    if (!pinValid) {
+      throw new Error('PIN incorreto')
+    }
+  }
+  // For users without PIN (legacy), allow login without PIN temporarily
   
   return {
     id: user.id,
@@ -46,13 +61,19 @@ export async function loginUser(whatsapp: string, cpf: string): Promise<AuthUser
 export async function registerUser(
   name: string,
   whatsapp: string,
-  cpf: string
+  cpf: string,
+  pin: string
 ): Promise<AuthUser | null> {
   const cleanWhatsapp = whatsapp.replace(/\D/g, '')
   const cleanCPF = cpf.replace(/\D/g, '')
   
   if (!validateCPF(cleanCPF)) {
     throw new Error('CPF inválido')
+  }
+
+  // Validate PIN
+  if (!/^\d{4}$/.test(pin)) {
+    throw new Error('PIN deve conter exatamente 4 números')
   }
   
   // Check if user already exists
@@ -68,12 +89,16 @@ export async function registerUser(
   if (existingUser) {
     throw new Error('Usuário já existe com este WhatsApp ou CPF')
   }
+
+  // Hash the PIN
+  const pinHash = await bcrypt.hash(pin, 10)
   
   const user = await prisma.user.create({
     data: {
       name,
       whatsapp: cleanWhatsapp,
       cpf: cleanCPF,
+      pin: pinHash,
       role: 'client'
     }
   })

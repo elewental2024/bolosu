@@ -12,7 +12,8 @@ export type LogType =
   | 'STATUS_CHANGED' 
   | 'WHATSAPP_SENT'
   | 'AGREEMENT_CONFIRMED'
-  | 'AGREEMENT_REJECTED';
+  | 'AGREEMENT_REJECTED'
+  | 'DELIVERY_FEE_UPDATED';
 
 export type LogActor = 'CUSTOMER' | 'ADMIN' | 'SYSTEM';
 
@@ -200,6 +201,27 @@ export async function logAgreement(
     {
       userId,
       finalPrice,
+    }
+  );
+}
+
+export async function logDeliveryFeeUpdate(
+  orderId: string,
+  oldFee: number | null,
+  newFee: number,
+  updatedBy: string,
+  reason?: string
+) {
+  return createOrderLog(
+    orderId,
+    'DELIVERY_FEE_UPDATED',
+    'ADMIN',
+    `Taxa de entrega ${oldFee !== null ? `atualizada de R$ ${oldFee.toFixed(2)} para` : 'definida como'} R$ ${newFee.toFixed(2)}${reason ? `. Motivo: ${reason}` : ''}`,
+    {
+      oldFee,
+      newFee,
+      updatedBy,
+      reason,
     }
   );
 }
