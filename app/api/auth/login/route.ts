@@ -5,6 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { whatsapp, cpf } = body
+    
+    console.log('Login attempt:', { whatsapp, cpf })
 
     if (!whatsapp || !cpf) {
       return NextResponse.json(
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await loginUser(whatsapp, cpf)
+    console.log('Login result:', user)
 
     if (!user) {
       return NextResponse.json(

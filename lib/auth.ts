@@ -13,7 +13,11 @@ export async function loginUser(whatsapp: string, cpf: string): Promise<AuthUser
   const cleanWhatsapp = whatsapp.replace(/\D/g, '')
   const cleanCPF = cpf.replace(/\D/g, '')
   
+  console.log('Cleaned credentials:', { cleanWhatsapp, cleanCPF })
+  console.log('CPF valid?', validateCPF(cleanCPF))
+  
   if (!validateCPF(cleanCPF)) {
+    console.log('CPF validation failed')
     return null
   }
   
@@ -23,6 +27,8 @@ export async function loginUser(whatsapp: string, cpf: string): Promise<AuthUser
       cpf: cleanCPF
     }
   })
+  
+  console.log('User found:', user)
   
   if (!user) {
     return null

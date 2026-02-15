@@ -4,25 +4,26 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
   
-  const admin = await prisma.user.upsert({
-    where: { cpf: '12345678900' },
-    update: {},
-    create: {
+  // Delete existing users to avoid conflicts
+  await prisma.user.deleteMany({})
+  
+  // Create admin user with valid CPF
+  const admin = await prisma.user.create({
+    data: {
       name: 'Administrador',
       whatsapp: '11999999999',
-      cpf: '12345678900',
+      cpf: '11144477735', // Valid CPF
       role: 'admin'
     }
   })
   console.log('Admin user created:', admin.name)
   
-  const client = await prisma.user.upsert({
-    where: { cpf: '98765432100' },
-    update: {},
-    create: {
+  // Create test client with valid CPF
+  const client = await prisma.user.create({
+    data: {
       name: 'Cliente Teste',
       whatsapp: '11988888888',
-      cpf: '98765432100',
+      cpf: '78292450378', // Valid CPF
       role: 'client'
     }
   })
@@ -54,6 +55,30 @@ async function main() {
       }
     })
     console.log('Product 2 created')
+    
+    await prisma.product.create({
+      data: {
+        name: 'Bolo Red Velvet',
+        description: 'Clássico bolo red velvet com cream cheese',
+        price: 95.00,
+        instagramUrl: 'https://www.instagram.com/p/example3/',
+        imageUrl: 'https://via.placeholder.com/400x400/c0392b/ffffff?text=Red+Velvet',
+        active: true
+      }
+    })
+    console.log('Product 3 created')
+    
+    await prisma.product.create({
+      data: {
+        name: 'Bolo de Cenoura',
+        description: 'Tradicional bolo de cenoura com cobertura de chocolate',
+        price: 70.00,
+        instagramUrl: 'https://www.instagram.com/p/example4/',
+        imageUrl: 'https://via.placeholder.com/400x400/e67e22/ffffff?text=Bolo+Cenoura',
+        active: true
+      }
+    })
+    console.log('Product 4 created')
   }
   
   console.log('Seeding completed!')
