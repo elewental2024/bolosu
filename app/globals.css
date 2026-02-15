@@ -1,12 +1,14 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Color Palette */
-  --primary: #FF69B4;        /* Hot Pink */
+  --primary: #FF69B4;
   --primary-dark: #E75480;
   --primary-light: #FFB6D4;
-  --secondary: #FFD700;      /* Gold */
-  --accent: #FFF0F5;         /* Lavender Blush */
+  --secondary: #FFD700;
+  --accent: #FFF0F5;
   --success: #4ADE80;
   --warning: #FBBF24;
   --error: #EF4444;
@@ -33,7 +35,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
@@ -58,7 +59,7 @@ html {
 
 /* Animation keyframes */
 @keyframes blob {
-  0% {
+  0%, 100% {
     transform: translate(0px, 0px) scale(1);
   }
   33% {
@@ -67,19 +68,18 @@ html {
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
-  100% {
-    transform: translate(0px, 0px) scale(1);
+}
+
+@layer utilities {
+  .animate-blob {
+    animation: blob 7s infinite;
   }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
+  
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
 }
