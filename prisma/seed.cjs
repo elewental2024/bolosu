@@ -28,7 +28,7 @@ async function main() {
     data: {
       name: 'Maria Silva',
       whatsapp: '11987654321',
-      cpf: '12345678900', // Valid CPF
+      cpf: '78292450378', // Valid CPF
       role: 'client'
     }
   })
