@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logOrderCreated } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, deliveryAddress, deliveryDate, observations, items, totalPrice } = body;
+    const { userId, deliveryAddress, deliveryDate, deliveryTime, observations, items, totalPrice } = body;
 
     // Validate required fields
     if (!userId || !deliveryAddress || !deliveryDate || !items || items.length === 0) {
@@ -14,15 +15,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create order with items
+    // Validar que a data não é no passado
+    const deliveryDateObj = new Date(deliveryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (deliveryDateObj < today) {
+      return NextResponse.json(
+        { error: 'Data de entrega não pode ser no passado' },
+        { status: 400 }
+      );
+    }
+
+    // Create order with items - status PENDING para negociação
     const order = await prisma.order.create({
       data: {
         userId,
         deliveryAddress,
-        deliveryDate: new Date(deliveryDate),
+        deliveryDate: deliveryDateObj,
+        deliveryTime,
         observations,
         totalPrice,
-        status: 'pending',
+        originalPrice: totalPrice, // Salvar preço original
+        status: 'PENDING', // Status inicial: aguardando negociação
         items: {
           create: items.map((item: any) => ({
             productId: item.productId,
@@ -37,8 +52,48 @@ export async function POST(request: NextRequest) {
             product: true,
           },
         },
+        user: true,
       },
     });
+
+    // Registrar criação do pedido no log (compliance legal)
+    await logOrderCreated(
+      order.id,
+      userId,
+      items,
+      totalPrice,
+      deliveryDateObj,
+      deliveryTime
+    );
+
+    // Tentar enviar notificação WhatsApp para o admin
+    try {
+      const whatsappResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/whatsapp/notify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          customerName: order.user.name,
+          items: order.items.map(item => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          deliveryDate: deliveryDateObj.toISOString(),
+          deliveryTime,
+          observations,
+        }),
+      });
+
+      if (!whatsappResponse.ok) {
+        console.warn('Failed to send WhatsApp notification, but order was created');
+      }
+    } catch (whatsappError) {
+      console.error('Error sending WhatsApp notification:', whatsappError);
+      // Não falhar a criação do pedido se WhatsApp falhar
+    }
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {

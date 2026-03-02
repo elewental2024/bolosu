@@ -19,14 +19,46 @@ interface Message {
   user: User;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface OrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  product: Product;
+}
+
+interface Order {
+  id: string;
+  status: string;
+  deliveryAddress: string;
+  deliveryDate: string;
+  observations?: string;
+  originalPrice: number;
+  negotiatedPrice?: number;
+  priceHistory?: string;
+  agreedByCustomer: boolean;
+  agreedByAdmin: boolean;
+  agreedAt?: string;
+  totalPrice?: number;
+  items: OrderItem[];
+  createdAt: string;
+}
+
 export default function ClientChatPage() {
   const router = useRouter();
   const params = useParams();
   const orderId = params.orderId as string;
   const [messages, setMessages] = useState<Message[]>([]);
+  const [order, setOrder] = useState<Order | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -40,10 +72,12 @@ export default function ClientChatPage() {
     
     const parsedUser = JSON.parse(userData);
     setUser(parsedUser);
+    fetchOrder();
     fetchMessages();
 
     // Poll for new messages every 3 seconds
     const interval = setInterval(() => {
+      fetchOrder();
       fetchMessages();
     }, 3000);
     setPollingInterval(interval);
@@ -56,6 +90,19 @@ export default function ClientChatPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const fetchOrder = async () => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch order');
+      }
+      const data = await response.json();
+      setOrder(data);
+    } catch (error) {
+      console.error('Error fetching order:', error);
+    }
+  };
 
   const fetchMessages = async () => {
     try {
@@ -105,6 +152,36 @@ export default function ClientChatPage() {
     }
   };
 
+  const handleAcceptQuote = async () => {
+    if (!user || !order) return;
+    
+    setAccepting(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/agreement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userRole: 'customer',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to accept quote');
+      }
+
+      await fetchOrder();
+      alert('Orçamento aceito com sucesso!');
+    } catch (error) {
+      console.error('Error accepting quote:', error);
+      alert('Erro ao aceitar orçamento. Tente novamente.');
+    } finally {
+      setAccepting(false);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -134,6 +211,37 @@ export default function ClientChatPage() {
         year: 'numeric',
       });
     }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      PENDING: 'Pendente',
+      NEGOTIATING: 'Negociando',
+      AWAITING_PAYMENT: 'Aguardando Pagamento',
+      PAID: 'Pago',
+      COMPLETED: 'Concluído',
+      CANCELLED: 'Cancelado',
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      NEGOTIATING: 'bg-blue-100 text-blue-800',
+      AWAITING_PAYMENT: 'bg-orange-100 text-orange-800',
+      PAID: 'bg-green-100 text-green-800',
+      COMPLETED: 'bg-gray-100 text-gray-800',
+      CANCELLED: 'bg-red-100 text-red-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   const handleLogout = () => {
@@ -195,7 +303,120 @@ export default function ClientChatPage() {
       </header>
 
       {/* Chat Container */}
-      <div className="flex-1 container mx-auto px-4 py-6 flex flex-col max-w-4xl">
+      <div className="flex-1 container mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 max-w-7xl">
+        {/* Order Details Sidebar */}
+        <div className="lg:w-80 flex-shrink-0">
+          <div className="bg-white rounded-xl shadow-lg p-6 sticky top-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Detalhes do Pedido</h2>
+            
+            {order ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-600">Status</p>
+                  <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                    {getStatusLabel(order.status)}
+                  </span>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-xs text-gray-600 mb-2">Preços</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Preço Original:</span>
+                      <span className="text-sm font-medium">{formatCurrency(order.originalPrice)}</span>
+                    </div>
+                    {order.negotiatedPrice && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Preço Negociado:</span>
+                        <span className="text-sm font-bold text-pink-600">{formatCurrency(order.negotiatedPrice)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {order.priceHistory && JSON.parse(order.priceHistory).length > 0 && (
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-600 mb-2">Histórico de Preços</p>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {JSON.parse(order.priceHistory).map((entry: any, index: number) => (
+                        <div key={index} className="text-xs bg-gray-50 rounded p-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 line-through">{formatCurrency(entry.oldPrice)}</span>
+                            <span className="font-medium text-pink-600">{formatCurrency(entry.newPrice)}</span>
+                          </div>
+                          {entry.reason && (
+                            <p className="text-gray-600 mt-1">{entry.reason}</p>
+                          )}
+                          <p className="text-gray-400 mt-1">
+                            {new Date(entry.updatedAt).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {order.negotiatedPrice && !order.agreedByCustomer && (
+                  <div className="border-t pt-4">
+                    <button
+                      onClick={handleAcceptQuote}
+                      disabled={accepting}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {accepting ? 'Aceitando...' : '✓ Aceitar Orçamento'}
+                    </button>
+                  </div>
+                )}
+
+                {order.agreedByCustomer && order.agreedByAdmin && order.agreedAt && (
+                  <div className="border-t pt-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-green-800 mb-1">✓ Acordo Confirmado</p>
+                      <p className="text-xs text-green-600">
+                        Ambas as partes concordaram em {new Date(order.agreedAt).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {order.agreedByCustomer && !order.agreedByAdmin && (
+                  <div className="border-t pt-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">⏳ Aguardando Admin</p>
+                      <p className="text-xs text-blue-600">Você aceitou o orçamento. Aguardando confirmação do admin.</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <p className="text-xs text-gray-600 mb-2">Itens do Pedido</p>
+                  <div className="space-y-2">
+                    {order.items.map((item) => (
+                      <div key={item.id} className="text-sm">
+                        <p className="text-gray-900">{item.quantity}x {item.product.name}</p>
+                        <p className="text-gray-600 text-xs">{formatCurrency(item.price * item.quantity)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-xs text-gray-600">Data de Entrega</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {new Date(order.deliveryDate).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto"></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="bg-white rounded-t-xl shadow-lg p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -212,7 +433,7 @@ export default function ClientChatPage() {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 bg-white shadow-lg overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <div className="flex-1 bg-white shadow-lg overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(100vh - 400px)' }}>
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">💬</div>
@@ -288,6 +509,7 @@ export default function ClientChatPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

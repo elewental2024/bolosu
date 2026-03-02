@@ -40,6 +40,12 @@ interface Order {
   deliveryAddress: string;
   deliveryDate: string;
   observations?: string;
+  originalPrice: number;
+  negotiatedPrice?: number;
+  priceHistory?: string;
+  agreedByCustomer: boolean;
+  agreedByAdmin: boolean;
+  agreedAt?: string;
   totalPrice?: number;
   items: OrderItem[];
   user: User;
@@ -47,6 +53,12 @@ interface Order {
 }
 
 const statusLabels: Record<string, string> = {
+  PENDING: 'Pendente',
+  NEGOTIATING: 'Negociando',
+  AWAITING_PAYMENT: 'Aguardando Pagamento',
+  PAID: 'Pago',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
   pending: 'Pendente',
   confirmed: 'Confirmado',
   preparing: 'Preparando',
@@ -56,6 +68,12 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  NEGOTIATING: 'bg-blue-100 text-blue-800',
+  AWAITING_PAYMENT: 'bg-orange-100 text-orange-800',
+  PAID: 'bg-green-100 text-green-800',
+  COMPLETED: 'bg-gray-100 text-gray-800',
+  CANCELLED: 'bg-red-100 text-red-800',
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
   preparing: 'bg-purple-100 text-purple-800',
@@ -73,6 +91,10 @@ export default function AdminChatDetailPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [newPrice, setNewPrice] = useState('');
+  const [priceReason, setPriceReason] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -95,6 +117,7 @@ export default function AdminChatDetailPage() {
     fetchMessages();
 
     const interval = setInterval(() => {
+      fetchOrder();
       fetchMessages();
     }, 3000);
     setPollingInterval(interval);
@@ -166,6 +189,77 @@ export default function AdminChatDetailPage() {
       alert('Erro ao enviar mensagem. Tente novamente.');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleUpdatePrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !order || !newPrice) return;
+    
+    const priceValue = parseFloat(newPrice);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      alert('Por favor, insira um preço válido.');
+      return;
+    }
+    
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/price`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          negotiatedPrice: priceValue,
+          updatedBy: user.id,
+          reason: priceReason || 'Atualização de preço',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update price');
+      }
+
+      await fetchOrder();
+      setNewPrice('');
+      setPriceReason('');
+      alert('Preço atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating price:', error);
+      alert('Erro ao atualizar preço. Tente novamente.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmAgreement = async () => {
+    if (!user || !order) return;
+    
+    setConfirming(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/agreement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userRole: 'admin',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to confirm agreement');
+      }
+
+      await fetchOrder();
+      alert('Acordo confirmado com sucesso!');
+    } catch (error) {
+      console.error('Error confirming agreement:', error);
+      alert('Erro ao confirmar acordo. Tente novamente.');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -287,6 +381,117 @@ export default function AdminChatDetailPage() {
                       {statusLabels[order.status]}
                     </span>
                   </div>
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-2">Preços</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Original:</span>
+                        <span className="text-sm font-medium">{formatCurrency(order.originalPrice)}</span>
+                      </div>
+                      {order.negotiatedPrice && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Negociado:</span>
+                          <span className="text-sm font-bold text-primary-600">{formatCurrency(order.negotiatedPrice)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="text-sm font-semibold text-gray-900">Atual:</span>
+                        <span className="text-lg font-bold text-primary-600">
+                          {formatCurrency(order.negotiatedPrice || order.originalPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {order.priceHistory && JSON.parse(order.priceHistory).length > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-semibold text-gray-600 mb-2">Histórico de Preços</p>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {JSON.parse(order.priceHistory).map((entry: any, index: number) => (
+                          <div key={index} className="text-xs bg-gray-50 rounded p-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 line-through">{formatCurrency(entry.oldPrice)}</span>
+                              <span className="font-medium text-primary-600">{formatCurrency(entry.newPrice)}</span>
+                            </div>
+                            {entry.reason && (
+                              <p className="text-gray-600 mt-1">{entry.reason}</p>
+                            )}
+                            <p className="text-gray-400 mt-1">
+                              {new Date(entry.updatedAt).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-semibold text-gray-600 mb-3">Atualizar Preço</p>
+                    <form onSubmit={handleUpdatePrice} className="space-y-2">
+                      <div>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={newPrice}
+                          onChange={(e) => setNewPrice(e.target.value)}
+                          placeholder="Novo preço (R$)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          disabled={updating}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          value={priceReason}
+                          onChange={(e) => setPriceReason(e.target.value)}
+                          placeholder="Motivo (opcional)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          disabled={updating}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={updating || !newPrice}
+                        className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {updating ? 'Atualizando...' : '💰 Atualizar Preço'}
+                      </button>
+                    </form>
+                  </div>
+
+                  {order.negotiatedPrice && !order.agreedByAdmin && (
+                    <div className="border-t pt-4">
+                      <button
+                        onClick={handleConfirmAgreement}
+                        disabled={confirming}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {confirming ? 'Confirmando...' : '✓ Confirmar Acordo'}
+                      </button>
+                    </div>
+                  )}
+
+                  {order.agreedByCustomer && order.agreedByAdmin && order.agreedAt && (
+                    <div className="border-t pt-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-sm font-semibold text-green-800 mb-1">✓ Acordo Confirmado</p>
+                        <p className="text-xs text-green-600">
+                          Acordo fechado em {new Date(order.agreedAt).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!order.agreedByCustomer && order.agreedByAdmin && (
+                    <div className="border-t pt-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm font-semibold text-blue-800 mb-1">⏳ Aguardando Cliente</p>
+                        <p className="text-xs text-blue-600">Você confirmou o acordo. Aguardando aceitação do cliente.</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4">
                     <p className="text-sm font-semibold text-gray-600 mb-2">Cliente</p>

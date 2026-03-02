@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { User, Smartphone, CreditCard, UserPlus } from "lucide-react";
 import { formatCPF, formatWhatsApp, validateCPF } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -50,83 +56,130 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-700 mb-2">🎂 Bolos Su</h1>
-          <h2 className="text-2xl font-semibold text-gray-800">Cadastrar</h2>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 flex items-center justify-center px-4 py-12">
+      {/* Background decoration */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+      <div className="absolute bottom-20 right-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+      
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <Card className="shadow-2xl border-0">
+          <CardHeader className="space-y-4 text-center pb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="inline-block mx-auto"
+            >
+              <div className="text-6xl">🎂</div>
+            </motion.div>
+            <CardTitle className="text-3xl">Criar Conta</CardTitle>
+            <CardDescription className="text-base">
+              Cadastre-se para fazer seus pedidos de bolos deliciosos
+            </CardDescription>
+          </CardHeader>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
+          <CardContent>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-6 text-sm flex items-start gap-2"
+              >
+                <span className="text-lg">⚠️</span>
+                <span>{error}</span>
+              </motion.div>
+            )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nome Completo
-            </label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Maria Silva"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              required
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome Completo</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  icon={<User className="w-5 h-5" />}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Maria Silva"
+                  required
+                />
+              </div>
 
-          <div>
-            <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-1">
-              WhatsApp
-            </label>
-            <input
-              type="tel"
-              id="whatsapp"
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))}
-              placeholder="(11) 99999-9999"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              required
-              maxLength={15}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Input
+                  type="tel"
+                  id="whatsapp"
+                  icon={<Smartphone className="w-5 h-5" />}
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))}
+                  placeholder="(11) 99999-9999"
+                  required
+                  maxLength={15}
+                />
+              </div>
 
-          <div>
-            <label htmlFor="cpf" className="block text-sm font-medium text-gray-700 mb-1">
-              CPF
-            </label>
-            <input
-              type="text"
-              id="cpf"
-              value={cpf}
-              onChange={(e) => setCpf(formatCPF(e.target.value))}
-              placeholder="000.000.000-00"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              required
-              maxLength={14}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  type="text"
+                  id="cpf"
+                  icon={<CreditCard className="w-5 h-5" />}
+                  value={cpf}
+                  onChange={(e) => setCpf(formatCPF(e.target.value))}
+                  placeholder="000.000.000-00"
+                  required
+                  maxLength={14}
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Cadastrando..." : "Cadastrar"}
-          </button>
-        </form>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Cadastrando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Cadastrar
+                  </>
+                )}
+              </Button>
+            </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          Já tem uma conta?{" "}
-          <Link href="/login" className="text-primary-600 hover:text-primary-700 font-semibold">
-            Entrar
-          </Link>
-        </div>
-      </div>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Já tem uma conta?{" "}
+                <Link
+                  href="/login"
+                  className="text-pink-600 hover:text-pink-700 font-semibold hover:underline"
+                >
+                  Faça login
+                </Link>
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+              <Link
+                href="/"
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                ← Voltar para a página inicial
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
